@@ -1,4 +1,5 @@
 # Unity - Scriptable Render Pipeline - Voxel-based Global Illumination
+# SPS VR Support Branch
 
 # Showcase
 * [Tutorial](https://youtu.be/nACG_mtSUDo)
@@ -16,7 +17,7 @@ Add the following dependency to `<project path>/Packages/manifest.json`:
 ```json
 {
   "dependencies": {
-    "com.looooong.srp.vxgi": "https://github.com/Looooong/Unity-SRP-VXGI.git"
+    "com.ddutchie.srp.vxgi": "https://github.com/ddutchie/Unity-SRP-VXGI.git"
   }
 }
 ```
