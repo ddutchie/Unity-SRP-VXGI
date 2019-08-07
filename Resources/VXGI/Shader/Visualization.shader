@@ -26,6 +26,7 @@ Shader "Hidden/VXGI/Visualization"
       {
         float4 position : SV_POSITION;
         float3 view : POSITION1;
+
       };
 
       // 6 inner faces of a cube
@@ -76,13 +77,14 @@ Shader "Hidden/VXGI/Visualization"
         float3 v = Vertices[id];
 
         v2f o;
-        o.position = UnityObjectToClipPos(v);
-        o.view = UnityObjectToViewPos(v);
+        o.position = ( UnityObjectToClipPos(v));
+        o.view = (UnityObjectToViewPos(v));
         return o;
       }
 
       half4 frag(v2f i) : SV_TARGET
       {
+
         float3 view = i.view;
         float3 unit = view * TracingStep / view.z;
         view += unit * DitherPattern[i.position.x % 4][i.position.y % 4];
@@ -96,6 +98,7 @@ Shader "Hidden/VXGI/Visualization"
           view += unit;
           coordinate = mul(transpose(UNITY_MATRIX_IT_MV), float4(view, 1.0));
         }
+
 
         return color;
       }

@@ -12,6 +12,7 @@ Shader "Hidden/VXGI/Lighting"
 
     float4x4 ClipToVoxel;
     float4x4 ClipToWorld;
+    half4 _MainTex_ST;
     Texture2D<float> _CameraDepthTexture;
     Texture2D<float3> _CameraGBufferTexture0;
     Texture2D<float4> _CameraGBufferTexture1;
@@ -26,8 +27,8 @@ Shader "Hidden/VXGI/Lighting"
       data.worldPosition = worldPosition.xyz / worldPosition.w;
 
       float3 gBuffer0 = _CameraGBufferTexture0.Sample(point_clamp_sampler, i.uv);
-      float4 gBuffer1 = _CameraGBufferTexture1.Sample(point_clamp_sampler, i.uv);
-      float3 gBuffer2 = _CameraGBufferTexture2.Sample(point_clamp_sampler, i.uv);
+      float4 gBuffer1 = _CameraGBufferTexture1.Sample(point_clamp_sampler,   i.uv);
+      float3 gBuffer2 = _CameraGBufferTexture2.Sample(point_clamp_sampler,  i.uv);
 
       data.diffuseColor = gBuffer0;
       data.specularColor = gBuffer1.rgb;
@@ -123,7 +124,7 @@ Shader "Hidden/VXGI/Lighting"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, i.uv).r;
+        float depth = _CameraDepthTexture.Sample(point_clamp_sampler,  i.uv).r;
 
         if (Linear01Depth(depth) >= 1.0) return 0.0;
 

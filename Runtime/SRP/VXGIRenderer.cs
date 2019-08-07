@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.PostProcessing;
+using UnityEngine.XR;
 
 public class VXGIRenderer : System.IDisposable {
   public enum MipmapSampler {
@@ -23,6 +24,7 @@ public class VXGIRenderer : System.IDisposable {
   int _cameraGBufferTexture2ID;
   int _cameraGBufferTexture3ID;
   int _dummyID;
+  int _dummyID2;
   int _frameBufferID;
   float[] _renderScale;
   CommandBuffer _command;
@@ -37,7 +39,6 @@ public class VXGIRenderer : System.IDisposable {
     _command = new CommandBuffer { name = "VXGIRenderer" };
     _filterSettings = new FilterRenderersSettings(true) { renderQueueRange = RenderQueueRange.all };
     _renderPipeline = renderPipeline;
-
     _cameraDepthTextureID = Shader.PropertyToID("_CameraDepthTexture");
     _cameraDepthNormalsTextureID = Shader.PropertyToID("_CameraDepthNormalsTexture");
     _cameraGBufferTexture0ID = Shader.PropertyToID("_CameraGBufferTexture0");
@@ -64,8 +65,28 @@ public class VXGIRenderer : System.IDisposable {
     };
 
     _postProcessRenderContext = new PostProcessRenderContext();
+
   }
 
+
+void SetDesc(Camera _cam){
+        desc1 = XRSettings.eyeTextureDesc;
+        desc1.width = _cam.pixelWidth;
+        desc1.height = _cam.pixelHeight;
+        desc1.depthBufferBits = 24;
+        desc1.colorFormat = RenderTextureFormat.Depth;
+        desc1.sRGB = (QualitySettings.activeColorSpace == ColorSpace.Linear);
+
+          desc2 = XRSettings.eyeTextureDesc;
+        desc2.width = _cam.pixelWidth;
+        desc2.height = _cam.pixelHeight;
+        desc2.depthBufferBits = 0;
+        desc2.colorFormat = RenderTextureFormat.ARGB32;
+        desc2.sRGB = (QualitySettings.activeColorSpace == ColorSpace.Linear);
+   
+}
+
+RenderTextureDescriptor desc1, desc2;
   public void Dispose() {
     _command.Dispose();
 
@@ -73,14 +94,25 @@ public class VXGIRenderer : System.IDisposable {
   }
 
   public void RenderDeferred(ScriptableRenderContext renderContext, Camera camera, VXGI vxgi) {
+   // SetDesc();
     ScriptableCullingParameters cullingParams;
     if (!CullResults.GetCullingParameters(camera, out cullingParams)) return;
     CullResults.Cull(ref cullingParams, renderContext, ref _cullResults);
 
-    renderContext.SetupCameraProperties(camera);
+    //Initialize Stereo
 
+    renderContext.SetupCameraProperties(camera,  camera.stereoEnabled);
+
+      if (camera.stereoEnabled)
+            {
+    renderContext.StartMultiEye(camera);
+            }
     int width = camera.pixelWidth;
     int height = camera.pixelHeight;
+
+
+///Descriptors!!!!!
+
 
     _command.GetTemporaryRT(_cameraDepthTextureID, width, height, 24, FilterMode.Point, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
     _command.GetTemporaryRT(_cameraGBufferTexture0ID, width, height, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
@@ -93,29 +125,31 @@ public class VXGIRenderer : System.IDisposable {
     renderContext.ExecuteCommandBuffer(_command);
     _command.Clear();
 
+ 
     var drawSettings = new DrawRendererSettings(camera, new ShaderPassName("Deferred"));
     drawSettings.flags = _renderPipeline.drawRendererFlags;
     drawSettings.rendererConfiguration = _renderPipeline.rendererConfiguration;
     drawSettings.sorting.flags = SortFlags.CommonOpaque;
 
     renderContext.DrawRenderers(_cullResults.visibleRenderers, ref drawSettings, _filterSettings);
-
+     
     if (camera.cameraType != CameraType.SceneView) {
       _command.EnableShaderKeyword("PROJECTION_PARAMS_X");
     } else {
       _command.DisableShaderKeyword("PROJECTION_PARAMS_X");
     }
 
-    _command.GetTemporaryRT(_dummyID, camera.pixelWidth, camera.pixelHeight, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
-    _command.Blit(_cameraDepthTextureID, BuiltinRenderTextureType.CameraTarget, UtilityShader.material, (int)UtilityShader.Pass.DepthCopy);
-    _command.Blit(BuiltinRenderTextureType.CameraTarget, _dummyID);
-    _command.Blit(_dummyID, _frameBufferID, UtilityShader.material, (int)UtilityShader.Pass.GrabCopy);
-    _command.ReleaseTemporaryRT(_dummyID);
-    renderContext.ExecuteCommandBuffer(_command);
+   _command.GetTemporaryRT(_dummyID,width, height, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+  //_command.Blit(_cameraDepthTextureID, BuiltinRenderTextureType.CameraTarget, UtilityShader.material, (int)UtilityShader.Pass.DepthCopy);
+
+//It seems there is an issue everywhere we sample this
+    //_command.Blit(BuiltinRenderTextureType.CameraTarget, _dummyID);
+   _command.Blit(_dummyID, _frameBufferID, UtilityShader.material, (int)UtilityShader.Pass.GrabCopy);
+   _command.ReleaseTemporaryRT(_dummyID);
+   renderContext.ExecuteCommandBuffer(_command);
     _command.Clear();
 
-    Matrix4x4 clipToWorld = camera.cameraToWorldMatrix * GL.GetGPUProjectionMatrix(camera.projectionMatrix, false).inverse;
-
+    Matrix4x4 clipToWorld = camera.cameraToWorldMatrix * GL.GetGPUProjectionMatrix(camera.projectionMatrix,false).inverse;
     _command.SetGlobalMatrix("ClipToWorld", clipToWorld);
     _command.SetGlobalMatrix("ClipToVoxel", vxgi.worldToVoxel * clipToWorld);
     _command.SetGlobalMatrix("WorldToVoxel", vxgi.worldToVoxel);
@@ -154,6 +188,14 @@ public class VXGIRenderer : System.IDisposable {
     _command.ReleaseTemporaryRT(_cameraGBufferTexture3ID);
     _command.ReleaseTemporaryRT(_frameBufferID);
     renderContext.ExecuteCommandBuffer(_command);
+
+    //Deactivate Stereo
+    if (camera.stereoEnabled)
+    {
+    renderContext.StopMultiEye(camera);
+    renderContext.StereoEndRender(camera);
+    }
+                            
     _command.Clear();
   }
 
@@ -204,6 +246,9 @@ public class VXGIRenderer : System.IDisposable {
     _command.ReleaseTemporaryRT(_dummyID);
     renderContext.ExecuteCommandBuffer(_command);
     _command.Clear();
+
+    _command.Blit(_dummyID, BuiltinRenderTextureType.CameraTarget);
+
   }
 
   public void RenderPostProcessingDebug(ScriptableRenderContext renderContext, Camera camera) {

@@ -27,7 +27,7 @@ Shader "Hidden/VXGI/Utility"
 
       float4 frag(BlitInput i, out float depth : SV_DEPTH) : SV_TARGET
       {
-        depth = tex2D(_CameraDepthTexture, i.uv).r;
+        depth = tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(i.uv)).r;
 
         if (Linear01Depth(depth) < 1.0) {
           return float4(0.0, 0.0, 0.0, 1.0);
@@ -56,7 +56,7 @@ Shader "Hidden/VXGI/Utility"
       {
         return EncodeDepthNormal(
           tex2D(_CameraDepthTexture, i.uv).r,
-          normalize(mad(tex2D(_CameraGBufferTexture2, i.uv).rgb, 2.0, -1.0))
+          normalize(mad(tex2D(_CameraGBufferTexture2,UnityStereoTransformScreenSpaceTex(i.uv)).rgb, 2.0, -1.0))
         );
       }
       ENDHLSL
@@ -85,7 +85,7 @@ Shader "Hidden/VXGI/Utility"
       {
         v2f o;
         o.position = UnityObjectToClipPos(v.vertex);
-        o.uv = ComputeScreenPos(o.position);
+        o.uv = UnityStereoTransformScreenSpaceTex( ComputeScreenPos(o.position));
 
 #ifdef PROJECTION_PARAMS_X
         if (_ProjectionParams.x < 0.0) o.uv.y = 1.0 - o.uv.y;
@@ -96,7 +96,7 @@ Shader "Hidden/VXGI/Utility"
 
       float4 frag(v2f i) : SV_TARGET
       {
-        return tex2Dproj(_MainTex, i.uv);
+        return tex2Dproj(_MainTex, UnityStereoTransformScreenSpaceTex(i.uv));
       }
       ENDHLSL
     }
@@ -131,8 +131,8 @@ Shader "Hidden/VXGI/Utility"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = LinearEyeDepth(_CameraDepthTexture.Sample(point_clamp_sampler, i.uv));
-        float4 neighbors = LowResDepth.Gather(point_clamp_sampler, i.uv);
+        float depth = LinearEyeDepth(_CameraDepthTexture.Sample(point_clamp_sampler,UnityStereoTransformScreenSpaceTex(i.uv)));
+        float4 neighbors = LowResDepth.Gather(point_clamp_sampler, UnityStereoTransformScreenSpaceTex(i.uv));
         float4 distances;
 
         float minDist = distances[0] = distance(depth, LinearEyeDepth(neighbors[0]));
@@ -149,10 +149,35 @@ Shader "Hidden/VXGI/Utility"
         }
 
         if (all(distances < 0.1)) {
-          return LowResColor.Sample(linear_clamp_sampler, i.uv);
+          return LowResColor.Sample(linear_clamp_sampler, UnityStereoTransformScreenSpaceTex(i.uv));
         } else {
           return LowResColor.Load(int3(mad(i.uv, LowResColor_TexelSize.zw, -0.5) + GatherOffsets[minIndex], 0));
         }
+      }
+      ENDHLSL
+    }
+
+     Pass
+    {
+      Name "BlitCopy"
+
+      BlendOp Min, Max
+      ZWrite On
+
+      HLSLPROGRAM
+      #pragma vertex BlitVertex
+      #pragma fragment frag
+
+      #include "UnityCG.cginc"
+      #include "Packages/com.looooong.srp.vxgi/ShaderLibrary/BlitSupport.hlsl"
+
+      sampler2D _MainTex;
+
+      float4 frag(BlitInput i) : SV_TARGET
+      {
+        float color = tex2D(_MainTex, UnityStereoTransformScreenSpaceTex(i.uv));
+          return color;
+        
       }
       ENDHLSL
     }

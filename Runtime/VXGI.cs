@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.XR;
 
 [ExecuteInEditMode]
 [RequireComponent(typeof(Camera))]
@@ -112,7 +113,11 @@ public class VXGI : MonoBehaviour {
       PrePass(renderContext, renderer);
     }
 
-    renderContext.SetupCameraProperties(camera);
+    renderContext.SetupCameraProperties(camera,  camera.stereoEnabled);
+       if (camera.stereoEnabled)
+            {
+    renderContext.StartMultiEye(camera);
+            }
 
     _command.ClearRenderTarget(
       (camera.clearFlags & CameraClearFlags.Depth) != 0,
@@ -129,6 +134,12 @@ public class VXGI : MonoBehaviour {
     } else {
       SetupShader(renderContext);
       renderer.RenderDeferred(renderContext, camera, this);
+    }
+
+       if (camera.stereoEnabled)
+    {
+    renderContext.StopMultiEye(camera);
+    renderContext.StereoEndRender(camera);
     }
   }
 
@@ -232,7 +243,7 @@ public class VXGI : MonoBehaviour {
       enableRandomWrite = true,
       msaaSamples = 1,
       sRGB = false
-    };
+      };
   }
 
   void CreateTextures() {
@@ -240,6 +251,7 @@ public class VXGI : MonoBehaviour {
     _radianceDescriptor.height = _radianceDescriptor.width = _radianceDescriptor.volumeDepth = currentResolution;
 
     _radiances = new RenderTexture[(int)Mathf.Log(_resolution - 1, 2)];
+
 
     for (int i = 0; i < _radiances.Length; i++) {
       _radiances[i] = new RenderTexture(_radianceDescriptor);
