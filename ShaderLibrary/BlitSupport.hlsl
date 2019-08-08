@@ -24,5 +24,22 @@ BlitInput BlitVertex(appdata_base v)
   return o;
 }
 
+// struct BlitInput2
+// {
+//   float4 vertex : SV_POSITION;
+//   float2 uv : TEXCOORD;
+//   UNITY_VERTEX_OUTPUT_STEREO
+ 
+// };
+
+
+// BlitInput2 BlitVertex2(appdata_base v)
+// {
+//   BlitInput2 o;
+//   o.vertex = UnityObjectToClipPos(v.vertex);
+//   o.uv = (v.texcoord);
+//   return o;
+// }
+
 
 #endif

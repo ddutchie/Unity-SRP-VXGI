@@ -140,10 +140,10 @@ RenderTextureDescriptor desc1, desc2;
     }
 
    _command.GetTemporaryRT(_dummyID,width, height, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
-  //_command.Blit(_cameraDepthTextureID, BuiltinRenderTextureType.CameraTarget, UtilityShader.material, (int)UtilityShader.Pass.DepthCopy);
+  _command.Blit(_cameraDepthTextureID, BuiltinRenderTextureType.CameraTarget, UtilityShader.material, (int)UtilityShader.Pass.DepthCopy);
 
 //It seems there is an issue everywhere we sample this
-    //_command.Blit(BuiltinRenderTextureType.CameraTarget, _dummyID);
+    _command.Blit(BuiltinRenderTextureType.CameraTarget, _dummyID);
    _command.Blit(_dummyID, _frameBufferID, UtilityShader.material, (int)UtilityShader.Pass.GrabCopy);
    _command.ReleaseTemporaryRT(_dummyID);
    renderContext.ExecuteCommandBuffer(_command);

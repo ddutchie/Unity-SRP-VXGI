@@ -27,11 +27,11 @@ Shader "Hidden/VXGI/Utility"
 
       float4 frag(BlitInput i, out float depth : SV_DEPTH) : SV_TARGET
       {
-        depth = tex2D(_CameraDepthTexture, UnityStereoTransformScreenSpaceTex(i.uv)).r;
+        depth = tex2D(_CameraDepthTexture, (i.uv)).r;
 
         if (Linear01Depth(depth) < 1.0) {
           return float4(0.0, 0.0, 0.0, 1.0);
-        } else {
+          } else {
           return 1.0;
         }
       }
@@ -55,8 +55,8 @@ Shader "Hidden/VXGI/Utility"
       float4 frag(BlitInput i) : SV_TARGET
       {
         return EncodeDepthNormal(
-          tex2D(_CameraDepthTexture, i.uv).r,
-          normalize(mad(tex2D(_CameraGBufferTexture2,UnityStereoTransformScreenSpaceTex(i.uv)).rgb, 2.0, -1.0))
+        tex2D(_CameraDepthTexture, i.uv).r,
+        normalize(mad(tex2D(_CameraGBufferTexture2,(i.uv)).rgb, 2.0, -1.0))
         );
       }
       ENDHLSL
@@ -85,18 +85,20 @@ Shader "Hidden/VXGI/Utility"
       {
         v2f o;
         o.position = UnityObjectToClipPos(v.vertex);
-        o.uv = UnityStereoTransformScreenSpaceTex( ComputeScreenPos(o.position));
+        o.uv = ( ComputeScreenPos(o.position));
 
-#ifdef PROJECTION_PARAMS_X
-        if (_ProjectionParams.x < 0.0) o.uv.y = 1.0 - o.uv.y;
-#endif
+        #ifdef PROJECTION_PARAMS_X
+          #if !UNITY_SINGLE_PASS_STEREO
+            if (_ProjectionParams.x < 0.0) o.uv.y = 1.0 - o.uv.y;
+          #endif 
+        #endif
 
         return o;
       }
 
       float4 frag(v2f i) : SV_TARGET
       {
-        return tex2Dproj(_MainTex, UnityStereoTransformScreenSpaceTex(i.uv));
+        return tex2Dproj(_MainTex, (i.uv));
       }
       ENDHLSL
     }
@@ -150,14 +152,14 @@ Shader "Hidden/VXGI/Utility"
 
         if (all(distances < 0.1)) {
           return LowResColor.Sample(linear_clamp_sampler, UnityStereoTransformScreenSpaceTex(i.uv));
-        } else {
+          } else {
           return LowResColor.Load(int3(mad(i.uv, LowResColor_TexelSize.zw, -0.5) + GatherOffsets[minIndex], 0));
         }
       }
       ENDHLSL
     }
 
-     Pass
+    Pass
     {
       Name "BlitCopy"
 
@@ -176,7 +178,7 @@ Shader "Hidden/VXGI/Utility"
       float4 frag(BlitInput i) : SV_TARGET
       {
         float color = tex2D(_MainTex, UnityStereoTransformScreenSpaceTex(i.uv));
-          return color;
+        return color;
         
       }
       ENDHLSL
