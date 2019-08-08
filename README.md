@@ -12,15 +12,7 @@
 </p>
 
 # Installation
-Add the following dependency to `<project path>/Packages/manifest.json`:
-
-```json
-{
-  "dependencies": {
-    "com.ddutchie.srp.vxgi": "https://github.com/ddutchie/Unity-SRP-VXGI.git"
-  }
-}
-```
+Download, unzip and add to your unity project. 
 
 # Requirements
 + Unity 2018 (Experimental API). Using Unity 2019 would require slight modification to the code.
