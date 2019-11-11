@@ -11,6 +11,7 @@ struct BlitInput
 {
   float4 vertex : SV_POSITION;
   float2 uv : TEXCOORD;
+  float2 uv1 : TEXCOORD1;
   UNITY_VERTEX_OUTPUT_STEREO
  
 };
@@ -20,7 +21,8 @@ BlitInput BlitVertex(appdata_base v)
 {
   BlitInput o;
   o.vertex = UnityObjectToClipPos(v.vertex);
-  o.uv = UnityStereoTransformScreenSpaceTex(v.texcoord);
+  o.uv = UnityStereoTransformScreenSpaceTex (v.texcoord);
+  o.uv1 = (v.texcoord);
   return o;
 }
 

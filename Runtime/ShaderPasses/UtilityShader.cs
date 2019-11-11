@@ -5,7 +5,8 @@ public static class UtilityShader {
     DepthCopy = 0,
     EncodeDepthNormal = 1,
     GrabCopy = 2,
-    LowResComposite = 3
+    LowResComposite = 3,
+    BlitCopy = 4
   }
 
   public static Material material {

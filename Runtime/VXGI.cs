@@ -237,12 +237,14 @@ public class VXGI : MonoBehaviour {
 
   #region RenderTextures
   void CreateTextureDescriptor() {
+    
     _radianceDescriptor = new RenderTextureDescriptor() {
       colorFormat = RenderTextureFormat.ARGBHalf,
       dimension = TextureDimension.Tex3D,
       enableRandomWrite = true,
       msaaSamples = 1,
       sRGB = false
+      //vrUsage = UnityEngine.VRTextureUsage.TwoEyes
       };
   }
 

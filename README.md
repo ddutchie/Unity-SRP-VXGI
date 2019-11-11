@@ -1,5 +1,4 @@
 # Unity - Scriptable Render Pipeline - Voxel-based Global Illumination
-# SPS VR Support Branch
 
 # Showcase
 * [Tutorial](https://youtu.be/nACG_mtSUDo)
@@ -12,7 +11,15 @@
 </p>
 
 # Installation
-Download, unzip and add to your unity project. 
+Add the following dependency to `<project path>/Packages/manifest.json`:
+
+```json
+{
+  "dependencies": {
+    "com.looooong.srp.vxgi": "https://github.com/Looooong/Unity-SRP-VXGI.git"
+  }
+}
+```
 
 # Requirements
 + Unity 2018 (Experimental API). Using Unity 2019 would require slight modification to the code.

@@ -55,7 +55,7 @@ Shader "Hidden/VXGI/Utility"
       float4 frag(BlitInput i) : SV_TARGET
       {
         return EncodeDepthNormal(
-        tex2D(_CameraDepthTexture, i.uv).r,
+        tex2D(_CameraDepthTexture, (i.uv)).r,
         normalize(mad(tex2D(_CameraGBufferTexture2,(i.uv)).rgb, 2.0, -1.0))
         );
       }
@@ -85,7 +85,7 @@ Shader "Hidden/VXGI/Utility"
       {
         v2f o;
         o.position = UnityObjectToClipPos(v.vertex);
-        o.uv = ( ComputeScreenPos(o.position));
+        o.uv = UnityStereoTransformScreenSpaceTex( ComputeScreenPos(o.position));
 
         #ifdef PROJECTION_PARAMS_X
           #if !UNITY_SINGLE_PASS_STEREO
@@ -133,8 +133,8 @@ Shader "Hidden/VXGI/Utility"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = LinearEyeDepth(_CameraDepthTexture.Sample(point_clamp_sampler,UnityStereoTransformScreenSpaceTex(i.uv)));
-        float4 neighbors = LowResDepth.Gather(point_clamp_sampler, UnityStereoTransformScreenSpaceTex(i.uv));
+        float depth = LinearEyeDepth(_CameraDepthTexture.Sample(point_clamp_sampler,(i.uv)));
+        float4 neighbors = LowResDepth.Gather(point_clamp_sampler, (i.uv));
         float4 distances;
 
         float minDist = distances[0] = distance(depth, LinearEyeDepth(neighbors[0]));
@@ -151,7 +151,7 @@ Shader "Hidden/VXGI/Utility"
         }
 
         if (all(distances < 0.1)) {
-          return LowResColor.Sample(linear_clamp_sampler, UnityStereoTransformScreenSpaceTex(i.uv));
+          return LowResColor.Sample(linear_clamp_sampler, (i.uv));
           } else {
           return LowResColor.Load(int3(mad(i.uv, LowResColor_TexelSize.zw, -0.5) + GatherOffsets[minIndex], 0));
         }
@@ -177,7 +177,7 @@ Shader "Hidden/VXGI/Utility"
 
       float4 frag(BlitInput i) : SV_TARGET
       {
-        float color = tex2D(_MainTex, UnityStereoTransformScreenSpaceTex(i.uv));
+        float color = tex2D(_MainTex, (i.uv1));
         return color;
         
       }

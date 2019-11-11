@@ -34,6 +34,37 @@ public class VXGIRenderer : System.IDisposable {
   PostProcessRenderContext _postProcessRenderContext;
   RenderTargetBinding _gBufferBinding;
   VXGIRenderPipeline _renderPipeline;
+  Matrix4x4 leftToWorld, rightToWorld, leftEye, rightEye;
+
+public void OnPreRender(Camera camera){ 
+    if (camera.stereoEnabled)
+    {
+
+        // Left and Right Eye inverse View Matrices
+
+        leftToWorld = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Left).inverse;
+        rightToWorld = camera.GetStereoViewMatrix(Camera.StereoscopicEye.Right).inverse;
+
+            Shader.SetGlobalMatrix("_LeftEyeToWorld", leftToWorld);
+            Shader.SetGlobalMatrix("_RightEyeToWorld", rightToWorld);
+
+ 
+        leftEye = camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left);
+        rightEye = camera.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right);
+ 
+        // Compensate for RenderTexture...
+
+        leftEye = GL.GetGPUProjectionMatrix(leftEye, true).inverse;
+        rightEye = GL.GetGPUProjectionMatrix(rightEye,true).inverse;
+
+           Shader.SetGlobalMatrix("_LeftEyeProjection", leftEye);
+            Shader.SetGlobalMatrix("_RightEyeProjection", rightEye);
+
+ 
+
+    }
+
+}
 
   public VXGIRenderer(VXGIRenderPipeline renderPipeline) {
     _command = new CommandBuffer { name = "VXGIRenderer" };
@@ -68,25 +99,6 @@ public class VXGIRenderer : System.IDisposable {
 
   }
 
-
-void SetDesc(Camera _cam){
-        desc1 = XRSettings.eyeTextureDesc;
-        desc1.width = _cam.pixelWidth;
-        desc1.height = _cam.pixelHeight;
-        desc1.depthBufferBits = 24;
-        desc1.colorFormat = RenderTextureFormat.Depth;
-        desc1.sRGB = (QualitySettings.activeColorSpace == ColorSpace.Linear);
-
-          desc2 = XRSettings.eyeTextureDesc;
-        desc2.width = _cam.pixelWidth;
-        desc2.height = _cam.pixelHeight;
-        desc2.depthBufferBits = 0;
-        desc2.colorFormat = RenderTextureFormat.ARGB32;
-        desc2.sRGB = (QualitySettings.activeColorSpace == ColorSpace.Linear);
-   
-}
-
-RenderTextureDescriptor desc1, desc2;
   public void Dispose() {
     _command.Dispose();
 
@@ -94,6 +106,7 @@ RenderTextureDescriptor desc1, desc2;
   }
 
   public void RenderDeferred(ScriptableRenderContext renderContext, Camera camera, VXGI vxgi) {
+    OnPreRender(camera);
    // SetDesc();
     ScriptableCullingParameters cullingParams;
     if (!CullResults.GetCullingParameters(camera, out cullingParams)) return;
@@ -106,13 +119,10 @@ RenderTextureDescriptor desc1, desc2;
       if (camera.stereoEnabled)
             {
     renderContext.StartMultiEye(camera);
+
             }
     int width = camera.pixelWidth;
     int height = camera.pixelHeight;
-
-
-///Descriptors!!!!!
-
 
     _command.GetTemporaryRT(_cameraDepthTextureID, width, height, 24, FilterMode.Point, RenderTextureFormat.Depth, RenderTextureReadWrite.Linear);
     _command.GetTemporaryRT(_cameraGBufferTexture0ID, width, height, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
@@ -142,12 +152,20 @@ RenderTextureDescriptor desc1, desc2;
    _command.GetTemporaryRT(_dummyID,width, height, 0, FilterMode.Point, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
   _command.Blit(_cameraDepthTextureID, BuiltinRenderTextureType.CameraTarget, UtilityShader.material, (int)UtilityShader.Pass.DepthCopy);
 
-//It seems there is an issue everywhere we sample this
-    _command.Blit(BuiltinRenderTextureType.CameraTarget, _dummyID);
-   _command.Blit(_dummyID, _frameBufferID, UtilityShader.material, (int)UtilityShader.Pass.GrabCopy);
+    //WORKS
+//It seems there is an issue everywhere we sample this BuiltinRenderTextureType.CameraTarget
+    _command.Blit(BuiltinRenderTextureType.CameraTarget, _dummyID, UtilityShader.material, (int)UtilityShader.Pass.BlitCopy);
+
+   _command.Blit(_dummyID, _frameBufferID);
    _command.ReleaseTemporaryRT(_dummyID);
    renderContext.ExecuteCommandBuffer(_command);
     _command.Clear();
+
+    // Matrix4x4    _WorldToCameraMatrix = camera.worldToCameraMatrix;
+    //  Matrix4x4   _CameraToWorldMatrix = _WorldToCameraMatrix.inverse;
+    //  Matrix4x4   _ProjectionMatrix = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
+    //  Matrix4x4   _ViewProjectionMatrix = _ProjectionMatrix * _CameraToWorldMatrix;
+
 
     Matrix4x4 clipToWorld = camera.cameraToWorldMatrix * GL.GetGPUProjectionMatrix(camera.projectionMatrix,false).inverse;
     _command.SetGlobalMatrix("ClipToWorld", clipToWorld);

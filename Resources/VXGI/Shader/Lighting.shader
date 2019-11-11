@@ -1,4 +1,5 @@
 Shader "Hidden/VXGI/Lighting"
+
 {
   Properties
   {
@@ -17,23 +18,18 @@ Shader "Hidden/VXGI/Lighting"
   Texture2D<float4> _CameraGBufferTexture1;
   Texture2D<float3> _CameraGBufferTexture2;
   Texture2D<float3> _CameraGBufferTexture3;
- 
+  uniform float4x4 _LeftEyeProjection;
+  uniform float4x4 _LeftEyeToWorld;
+  uniform float4x4 _RightEyeProjection;
+  uniform float4x4 _RightEyeToWorld;
+  
 
   LightingData ConstructLightingData(BlitInput i, float depth)
   {
     LightingData data;   
 
     //ScreenUV Adjustments Still a little off on right eye. 
-    
-    float2 uv = i.uv;
-    
-    #if UNITY_SINGLE_PASS_STEREO
-      // If Single-Pass Stereo mode is active, transform the
-      // coordinates to get the correct output UV for the current eye.
-      float4 scaleOffset = unity_StereoScaleOffset[unity_StereoEyeIndex];
-      uv = (uv- scaleOffset.zw) / scaleOffset.xy;
-      //  data.worldPosition = float3(worldpos2, worldPosition3.z);
-    #endif 
+    float2 uv = (  i.uv1);  
 
 
     float4 worldPosition = mul(ClipToWorld, float4(mad(2.0, (uv), -1.0), DEPTH_TO_CLIP_Z(depth), 1.0));
@@ -41,16 +37,16 @@ Shader "Hidden/VXGI/Lighting"
     data.worldPosition = worldPosition3;
 
 
-    float3 gBuffer0 = _CameraGBufferTexture0.Sample(point_clamp_sampler, i.uv);
-    float4 gBuffer1 = _CameraGBufferTexture1.Sample(point_clamp_sampler,   i.uv);
-    float3 gBuffer2 = _CameraGBufferTexture2.Sample(point_clamp_sampler,  i.uv);
+    float3 gBuffer0 = _CameraGBufferTexture0.Sample(point_clamp_sampler, uv);
+    float4 gBuffer1 = _CameraGBufferTexture1.Sample(point_clamp_sampler, uv);
+    float3 gBuffer2 = _CameraGBufferTexture2.Sample(point_clamp_sampler, uv);
 
     data.diffuseColor = gBuffer0;
     data.specularColor = gBuffer1.rgb;
     data.glossiness = gBuffer1.a;
 
     data.vecN = mad(gBuffer2, 2.0, -1.0);
-    data.vecV = normalize(_WorldSpaceCameraPos - data.worldPosition);
+    data.vecV = normalize(_WorldSpaceCameraPos - worldPosition3);
 
     data.Initialize();
 
@@ -74,11 +70,14 @@ Shader "Hidden/VXGI/Lighting"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, i.uv).r;
+        float2 uv = (  i.uv1);    
+
+
+        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, uv).r;
 
         if (Linear01Depth(depth) >= 1.0) return 0.0;
 
-        float3 emissiveColor = _CameraGBufferTexture3.Sample(point_clamp_sampler, i.uv);
+        float3 emissiveColor = _CameraGBufferTexture3.Sample(point_clamp_sampler, uv);
 
         #ifndef UNITY_HDR_ON
           // Decode value provided by built-in Unity g-buffer generator
@@ -101,7 +100,9 @@ Shader "Hidden/VXGI/Lighting"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, i.uv).r;
+        float2 uv = (  i.uv1);    
+
+        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, uv).r;
 
         if (Linear01Depth(depth) >= 1.0) return 0.0;
 
@@ -120,7 +121,9 @@ Shader "Hidden/VXGI/Lighting"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, i.uv).r;
+        float2 uv = ( i.uv1);    
+
+        float depth = _CameraDepthTexture.Sample(point_clamp_sampler, uv).r;
 
         if (Linear01Depth(depth) >= 1.0) return 0.0;
 
@@ -139,7 +142,9 @@ Shader "Hidden/VXGI/Lighting"
 
       float3 frag(BlitInput i) : SV_TARGET
       {
-        float depth = _CameraDepthTexture.Sample(point_clamp_sampler,  i.uv).r;
+        float2 uv = ( i.uv1);    
+
+        float depth = _CameraDepthTexture.Sample(point_clamp_sampler,  uv).r;
 
         if (Linear01Depth(depth) >= 1.0) return 0.0;
 
